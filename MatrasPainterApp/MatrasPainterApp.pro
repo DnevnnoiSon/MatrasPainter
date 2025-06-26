@@ -8,11 +8,15 @@ TEMPLATE = app
 INCLUDEPATH += Inc
 
 SOURCES += \
+    Inc/fileloader.cpp \
+    Inc/painterworker.cpp \
     Src/main.cpp \
     Src/mainwindow.cpp
 
 HEADERS += \
-    Inc/mainwindow.h
+    Inc/fileloader.h \
+    Inc/mainwindow.h \
+    Inc/painterworker.h
 
 FORMS += \
     ui/mainwindow.ui
