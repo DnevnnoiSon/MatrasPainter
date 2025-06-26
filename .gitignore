@@ -1,0 +1,13 @@
+*.pro.user
+*.user
+*.dll
+*.exe
+*.stash
+icon.qrc
+
+build/
+.metadata/
+
+/build-*
+/release/
+/debug/
