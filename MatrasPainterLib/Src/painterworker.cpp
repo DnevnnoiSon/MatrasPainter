@@ -67,9 +67,10 @@ void PainterWorker::process(const QString &filePath, int period)
             // Нахождение байта с нужным значением:
             qint64 byteIndex = bitPosition / 8;
             // Вычисление позиции бита внутри этого байта (7 - ... для MSB-first)
-            int bitInByte = 7 - (bitPosition % 8);
+            int bitInByte = 7 - (bitPosition % 8); // Отрисовка: От старшего к младшему
+            //int bitInByte = bitPosition % 8;         // Отрисовка: От младшего к старшему
 
-            // Проверка на всякий - установлен ли бит? (1 или 0)
+            // Проверка на всякий - установлен ли бит? (1 или 0) //- // Отрисовка: От старшего к младшему
             bool isBitSet = (data[byteIndex] >> bitInByte) & 1;
 
             // Установка цвета пикселя:
