@@ -29,7 +29,21 @@ public:
     */
     void run() override;
 signals:
-    // ошибочное завершение или успешное считывание
+    /**
+    * @brief Сигнал об успешной загрузке
+    * @param data - Загруженные данные
+    *
+    * @note Срабатывает в потоке вызывающего объекта
+    */
+//    void finished(std::unique_ptr<QByteArray> data);
+
+    /**
+    * @brief Сигнал об ошибке загрузки
+    * @param error - Текстовое описание ошибки
+    *
+    * @warning Срабатывает только при критических ошибках [файла]
+    */
+    void error(const QString& error);
 
 private:
     QString m_filePath; ///< Путь к файлу для обращения
