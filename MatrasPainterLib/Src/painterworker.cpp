@@ -8,15 +8,11 @@
 #include <QElapsedTimer>
 
 #include <QFileDevice>
-#include <limits>
-
 
 PainterWorker::PainterWorker(QObject *parent) : QObject(parent) {}
 
 void PainterWorker::process(const QString &filePath, int period)
 {
-
-
     QElapsedTimer timer;
     timer.start();
     qint64 initTime = 0, readTime = 0, lutTime = 0, processTime = 0;
