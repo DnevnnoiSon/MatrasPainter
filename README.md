@@ -45,6 +45,7 @@
 ---
 
 # ⚙️ Демонстрация работы
-![image](https://github.com/user-attachments/assets/478663be-3e35-4230-a1b4-094d8e1e3d81)
+
+https://github.com/user-attachments/assets/7fa424f9-da3f-4a58-8b57-083b178eef5d
 
 ---
