@@ -7,18 +7,20 @@
 #include <algorithm>
 #include <QElapsedTimer>
 
+#include <QFileDevice>
+#include <limits>
+
 
 PainterWorker::PainterWorker(QObject *parent) : QObject(parent) {}
 
 void PainterWorker::process(const QString &filePath, int period)
 {
-    // Таймер для замера производительности
+
 
     QElapsedTimer timer;
     timer.start();
     qint64 initTime = 0, readTime = 0, lutTime = 0, processTime = 0;
 
-    // Валидация параметров
     if (filePath.isEmpty()) {
         emit error("Путь к файлу не может быть пустым");
         return;
@@ -29,38 +31,79 @@ void PainterWorker::process(const QString &filePath, int period)
     }
     initTime = timer.elapsed();
 
-    // Загрузка файла
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         emit error("Ошибка открытия файла: " + file.errorString());
         return;
     }
 
-    const QByteArray fileBytes = file.readAll();
-
-    file.close();
-    readTime = timer.elapsed() - initTime;
-
-    // Расчет параметров изображения
-    const qint64 totalBits = fileBytes.size() * 8;
-    if (totalBits == 0) {
+    const qint64 fileSize = file.size();
+    if (fileSize == 0) {
+        file.close();
         emit error("Файл пуст");
         return;
     }
 
+    const uchar* data = file.map(0, fileSize);
+    if (!data) {
+        file.close();
+        emit error("Не удалось отобразить файл в память: " + file.errorString());
+        return;
+    }
+    readTime = timer.elapsed() - initTime;
+
+    const qint64 totalBits = fileSize * 8;
     const int width = period;
+
+    if (totalBits < period) {
+        /// Добавлен const_cast
+        file.unmap(const_cast<uchar*>(data));
+        file.close();
+        emit error("Данных в файле недостаточно для одной строки изображения");
+        return;
+    }
     const int height = totalBits / period;
 
+
+    const qint64 max_pixels = 1'200'000'000;
+    if (static_cast<qint64>(width) * height > max_pixels) {
+        ///  Добавлен const_cast
+        file.unmap(const_cast<uchar*>(data));
+        file.close();
+        QString errorMsg = QString("Изображение слишком велико (%1x%2). Выбери файл меньшего размера.")
+                               .arg(width).arg(height);
+        emit error(errorMsg);
+        return;
+    }
+
     if (width <= 0 || height <= 0) {
+        /// Добавлен const_cast
+        file.unmap(const_cast<uchar*>(data));
+        file.close();
         emit error("Некорректные размеры изображения");
         return;
     }
 
-    // Инициализация изображения
-    QImage image(width, height, QImage::Format_RGB32);
+    QImage image;
+    try {
+        image = QImage(width, height, QImage::Format_RGB32);
+    } catch (const std::bad_alloc &) {
+        /// Добавлен const_cast
+        file.unmap(const_cast<uchar*>(data));
+        file.close();
+        emit error("Недостаточно памяти для создания изображения.");
+        return;
+    }
+
+    if (image.isNull()) {
+        file.unmap(const_cast<uchar*>(data));
+        file.close();
+        emit error("Не удалось создать QImage. Возможно, размеры слишком велики.");
+        return;
+    }
+
     const QRgb colors[2] = {QColor(Qt::black).rgb(), QColor(Qt::green).rgb()};
 
-    /// ОПТИМИЗАЦИЯ 1: Lookup-таблица ///
     struct BytePixels { QRgb pixels[8]; };
     std::array<BytePixels, 256> lut;
     for (uint32_t byte = 0; byte < 256; ++byte) {
@@ -70,23 +113,17 @@ void PainterWorker::process(const QString &filePath, int period)
     }
     lutTime = timer.elapsed() - readTime - initTime;
 
-    // Параметры доступа к данным
-    const uchar* data = reinterpret_cast<const uchar*>(fileBytes.constData());
     uchar* imgBits = image.bits();
     const int scanLineBytes = image.bytesPerLine();
 
-    /// ОПТИМИЗАЦИЯ 2: Трехфазная обработка ///
     const qint64 startProcess = timer.elapsed();
     for (int y = 0; y < height; y++) {
         QRgb* scanline = reinterpret_cast<QRgb*>(imgBits + y * scanLineBytes);
         const qint64 startBit = static_cast<qint64>(y) * width;
-
-        // Инициализация позиции
         const uchar* bytePtr = data + startBit/8;
         int bitOffset = 7 - (startBit % 8);
         int x = 0;
 
-        // Фаза 1: Обработка невыровненных битов
         while (x < width && bitOffset < 7) {
             scanline[x++] = colors[(*bytePtr >> bitOffset) & 1];
             if (--bitOffset < 0) {
@@ -95,14 +132,12 @@ void PainterWorker::process(const QString &filePath, int period)
             }
         }
 
-        // Фаза 2: Блочная обработка через LUT
         const int byteBlocks = (width - x) / 8;
         for (int i = 0; i < byteBlocks; ++i) {
             std::copy_n(lut[*bytePtr++].pixels, 8, scanline + x);
             x += 8;
         }
 
-        // Фаза 3: Обработка остаточных битов
         while (x < width) {
             scanline[x++] = colors[(*bytePtr >> bitOffset) & 1];
             if (--bitOffset < 0) {
@@ -113,18 +148,21 @@ void PainterWorker::process(const QString &filePath, int period)
     }
     processTime = timer.elapsed() - startProcess;
 
-    // Вывод результатов производительности
+    /// Добавлен const_cast
+    file.unmap(const_cast<uchar*>(data));
+    file.close();
+
     qDebug() << "========================================";
     qDebug() << "Производительность генерации изображения";
     qDebug() << "========================================";
-    qDebug() << "Размер файла:" << fileBytes.size() / 1024 << "KB";
+    qDebug() << "Размер файла:" << fileSize / 1024 << "KB";
     qDebug() << "Размер изображения:" << width << "x" << height << "пикселей";
 
     qDebug() << "Общее время:" << timer.elapsed() << "ms";
 
     qDebug() << "----------------------------------------";
     qDebug() << "Инициализация:" << initTime << "ms";
-    qDebug() << "Чтение файла:" << readTime << "ms";
+    qDebug() << "Чтение файла (map):" << readTime << "ms";
     qDebug() << "Генерация LUT:" << lutTime << "ms";
     qDebug() << "Обработка пикселей:" << processTime << "ms";
     qDebug() << "----------------------------------------";
