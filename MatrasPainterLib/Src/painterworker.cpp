@@ -3,19 +3,24 @@
 #include <QDataStream>
 #include <QColor>
 #include <QDebug>
+
+#include <algorithm>
 #include <QElapsedTimer>
+
 
 PainterWorker::PainterWorker(QObject *parent) : QObject(parent) {}
 
 void PainterWorker::process(const QString &filePath, int period)
 {
+    // Таймер для замера производительности
+
     QElapsedTimer timer;
     timer.start();
     qint64 initTime = 0, readTime = 0, lutTime = 0, processTime = 0;
 
     // Валидация параметров
     if (filePath.isEmpty()) {
-        emit error("Файл пуст. Требуется выбрать");
+        emit error("Путь к файлу не может быть пустым");
         return;
     }
     if (period <= 0) {
@@ -30,60 +35,93 @@ void PainterWorker::process(const QString &filePath, int period)
         emit error("Ошибка открытия файла: " + file.errorString());
         return;
     }
-    QByteArray fileBytes = file.readAll();
+
+    const QByteArray fileBytes = file.readAll();
+
     file.close();
     readTime = timer.elapsed() - initTime;
 
+    // Расчет параметров изображения
     const qint64 totalBits = fileBytes.size() * 8;
     if (totalBits == 0) {
         emit error("Файл пуст");
         return;
     }
 
-    // Расчет размеров изображения
     const int width = period;
-    const int height = static_cast<int>(totalBits / period);
+    const int height = totalBits / period;
+
     if (width <= 0 || height <= 0) {
-        emit error("Ошибка размера изображения. Требуется проверка периода.");
+        emit error("Некорректные размеры изображения");
         return;
     }
 
     // Инициализация изображения
     QImage image(width, height, QImage::Format_RGB32);
-    const QRgb colorOne = QColor(Qt::green).rgb();
-    const QRgb colorZero = QColor(Qt::black).rgb();
+    const QRgb colors[2] = {QColor(Qt::black).rgb(), QColor(Qt::green).rgb()};
 
-    // LUT не используется в этой версии, но для совместимости вывода
-    lutTime = 0;
-
-    const uchar *data = reinterpret_cast<const uchar*>(fileBytes.constData());
-
-    // Замер времени обработки пикселей
-    const qint64 startProcess = timer.elapsed();
-
-    // Основной цикл обработки
-    for (int y = 0; y < height; ++y) {
-        QRgb *scanLine = reinterpret_cast<QRgb*>(image.scanLine(y));
-
-        for (int x = 0; x < width; ++x) {
-            qint64 bitPosition = (qint64)y * width + x;
-            qint64 byteIndex = bitPosition / 8;
-            int bitInByte = 7 - (bitPosition % 8);
-            bool isBitSet = (data[byteIndex] >> bitInByte) & 1;
-            scanLine[x] = isBitSet ? colorOne : colorZero;
+    /// ОПТИМИЗАЦИЯ 1: Lookup-таблица ///
+    struct BytePixels { QRgb pixels[8]; };
+    std::array<BytePixels, 256> lut;
+    for (uint32_t byte = 0; byte < 256; ++byte) {
+        for (int bit = 0; bit < 8; ++bit) {
+            lut[byte].pixels[bit] = colors[(byte >> (7 - bit)) & 1];
         }
     }
+    lutTime = timer.elapsed() - readTime - initTime;
 
+    // Параметры доступа к данным
+    const uchar* data = reinterpret_cast<const uchar*>(fileBytes.constData());
+    uchar* imgBits = image.bits();
+    const int scanLineBytes = image.bytesPerLine();
+
+    /// ОПТИМИЗАЦИЯ 2: Трехфазная обработка ///
+    const qint64 startProcess = timer.elapsed();
+    for (int y = 0; y < height; y++) {
+        QRgb* scanline = reinterpret_cast<QRgb*>(imgBits + y * scanLineBytes);
+        const qint64 startBit = static_cast<qint64>(y) * width;
+
+        // Инициализация позиции
+        const uchar* bytePtr = data + startBit/8;
+        int bitOffset = 7 - (startBit % 8);
+        int x = 0;
+
+        // Фаза 1: Обработка невыровненных битов
+        while (x < width && bitOffset < 7) {
+            scanline[x++] = colors[(*bytePtr >> bitOffset) & 1];
+            if (--bitOffset < 0) {
+                bitOffset = 7;
+                bytePtr++;
+            }
+        }
+
+        // Фаза 2: Блочная обработка через LUT
+        const int byteBlocks = (width - x) / 8;
+        for (int i = 0; i < byteBlocks; ++i) {
+            std::copy_n(lut[*bytePtr++].pixels, 8, scanline + x);
+            x += 8;
+        }
+
+        // Фаза 3: Обработка остаточных битов
+        while (x < width) {
+            scanline[x++] = colors[(*bytePtr >> bitOffset) & 1];
+            if (--bitOffset < 0) {
+                bitOffset = 7;
+                bytePtr++;
+            }
+        }
+    }
     processTime = timer.elapsed() - startProcess;
-    const qint64 totalTime = timer.elapsed();
 
-    // Вывод результатов в требуемом формате
+    // Вывод результатов производительности
     qDebug() << "========================================";
     qDebug() << "Производительность генерации изображения";
     qDebug() << "========================================";
     qDebug() << "Размер файла:" << fileBytes.size() / 1024 << "KB";
     qDebug() << "Размер изображения:" << width << "x" << height << "пикселей";
-    qDebug() << "Общее время:" << totalTime << "ms";
+
+    qDebug() << "Общее время:" << timer.elapsed() << "ms";
+
     qDebug() << "----------------------------------------";
     qDebug() << "Инициализация:" << initTime << "ms";
     qDebug() << "Чтение файла:" << readTime << "ms";

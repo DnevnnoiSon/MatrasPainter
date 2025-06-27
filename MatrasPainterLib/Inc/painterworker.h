@@ -23,6 +23,7 @@ public slots:
      * @brief Запуск процесс генерации изображения.
      * @param filePath Путь к бинарному файлу.
      * @param period Период (ширина) для отрисовки в битах.
+     * @details Выполнена доп. оптимизация при отрисовки Image
      */
     void process(const QString &filePath, int period);
 
