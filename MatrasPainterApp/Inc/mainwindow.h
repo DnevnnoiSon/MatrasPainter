@@ -4,20 +4,21 @@
 #include <QMainWindow>
 #include <QImage>
 #include <QThread>
+#include <QScrollArea>
 #include "painterworker.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
-
 /**
- * @class MainWindow
- * @brief Главное окно приложения для визуализации бинарных файлов.
+ * @brief Класс MainWindow представляет собой главное окно приложения.
  *
- * Управляет пользовательским интерфейсом, взаимодействует с рабочим потоком
- * для генерации изображений и отображает результат.
-*/
+ * Занимается обработкой взаимодействия с пользователем, управляет файловыми операциями,
+ * отображает сгенерированное из битового потока изображение и предоставляет
+ * элементы навигации, такие как масштабирование и панорамирование.
+ * Обработка изображения вынесена в рабочий поток для сохранения отзывчивости интерфейса.
+ */
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -26,66 +27,72 @@ public:
     /**
      * @brief Конструктор класса MainWindow.
      * @param parent Родительский виджет, по умолчанию nullptr.
-    */
-    MainWindow(QWidget *parent = nullptr);
+     */
+    explicit MainWindow(QWidget *parent = nullptr);
 
     /**
      * @brief Деструктор класса MainWindow.
-     *
-     * Корректно завершает рабочий поток.
-    */
+     */
     ~MainWindow();
 
-private slots:
-    /**
-     * @brief Слот, вызываемый при выборе файла через меню "Открыть".
-     */
-    void onOpenFileActionTriggered();
-    /**
-     * @brief Слот, вызываемый при нажатии на кнопку "Обновить".
-     * Запускает процесс генерации изображения.
-     */
-    void onApplyButtonClicked();
-    /**
-     * @brief Слот для обработки готового изображения из рабочего потока.
-     * @param image Сгенерированное изображение.
-     */
-    void onImageReady(const QImage &image);
-    /**
-     * @brief Слот для обработки сигнала об ошибке из рабочего потока.
-     * @param error Текст ошибки.
-     */
-    void onProcessingError(const QString &error);
 signals:
     /**
-     * @brief Сигнал для запуска обработки в рабочем потоке.
-     * @param filePath Путь к бинарному файлу.
-     * @param period Период (ширина) изображения в битах.
+     * @brief Сигнал для запроса обработки файла битового потока.
+     * @param filePath Путь к входному файлу .bin.
+     * @param period Значение периода для обработки.
      */
     void requestProcess(const QString &filePath, int period);
 
+private slots:
+    /// Обработчики действий и кнопок
+    void onOpenFileActionTriggered();
+    void onApplyButtonClicked();
+
+    /// Слоты для обратных вызовов от рабочего потока
+    void onImageReady(const QImage &image);
+    void onProcessingError(const QString &error);
+
+    /// Слоты для масштабирования и навигации
+    void onZoomIn();
+    void onZoomOut();
+    void onZoomReset();
+
 private:
     /**
-     * @brief Настраивает все соединения сигналов и слотов.
+     * @brief Устанавливются все соединения сигналов и слотов.
      */
     void setupConnections();
+
     /**
-     * @brief Инициирует запуск процесса генерации изображения.
+     * @brief Инициирует процесс обработки изображения.
      */
     void startProcessing();
+
     /**
-     * @brief Обновляет отображаемое изображение с учетом текущего масштаба.
+     * @brief Обновляет отображаемое изображение на основе текущего масштаба.
      */
-    void updateScaledImage();
+    void updateImageDisplay();
 
-    Ui::MainWindow *ui;         ///< Указатель на объект UI, созданный в Qt Designer.
-    QThread workerThread;       ///< Рабочий поток для выполнения генерации.
-    PainterWorker *worker;      ///< Объект-исполнитель, который будет перемещен в workerThread.
-    QString m_currentFilePath;  ///< Путь к последнему открытому файлу.
+    /**
+     * @brief Масштабирует изображение по заданному коэффициенту, сохраняя центр вида.
+     * @param factor Коэффициент умножения для масштабирования (например, 1.25 для увеличения).
+     */
+    void scaleImage(double factor);
 
-    /// Поля для масштабирования:
-    QImage m_originalImage;     ///< Оригинальное, немасштабированное изображение.
-    qreal m_scaleFactor = 1.0;  ///< Текущий фактор масштабирования.
+private:
+    Ui::MainWindow *ui;
+    QThread workerThread;
+    PainterWorker *worker;
+
+    QString m_currentFilePath;
+    QImage m_originalImage;
+
+    double m_scaleFactor = 1.0;  ///< Текущий уровень масштабирования, где 1.0 — это 100%.
+
+    /// Минимально допустимый коэффициент масштабирования (например, 0.1 для 10%).
+    static constexpr double MIN_SCALE_FACTOR = 0.1;
+    /// Максимально допустимый коэффициент масштабирования (например, 10.0 для 1000%).
+    static constexpr double MAX_SCALE_FACTOR = 10.0;
 };
-#endif // MAINWINDOW_H
 
+#endif // MAINWINDOW_H

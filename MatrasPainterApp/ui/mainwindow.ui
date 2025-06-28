@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>838</width>
-    <height>643</height>
+    <width>808</width>
+    <height>671</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -27,6 +27,45 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_3">
     <item>
+     <widget class="QFrame" name="frame_2">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>36</height>
+       </size>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <widget class="QPushButton" name="zoomInButton">
+         <property name="text">
+          <string>Zoom In</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="zoomOutButton">
+         <property name="text">
+          <string>Zoom Out</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="zoomResetButton">
+         <property name="text">
+          <string>Reset [100%]</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
      <widget class="QScrollArea" name="scrollArea">
       <property name="maximumSize">
        <size>
@@ -34,21 +73,61 @@
         <height>16777215</height>
        </size>
       </property>
+      <property name="styleSheet">
+       <string notr="true"> ui-&gt;scrollArea-&gt;setBackgroundRole(QPalette::Dark);</string>
+      </property>
       <property name="widgetResizable">
-       <bool>true</bool>
+       <bool>false</bool>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
       </property>
       <widget class="QWidget" name="scrollAreaWidgetContents_3">
        <property name="geometry">
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>818</width>
-         <height>412</height>
+         <width>788</width>
+         <height>383</height>
         </rect>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout">
-        <item>
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="2" column="1">
+         <widget class="QScrollBar" name="horizontalScrollBar">
+          <property name="styleSheet">
+           <string notr="true"> QScrollBar::handle:vertical {
+            background: #808080; /* Цвет ручки */
+            min-height: 25px;    /* Минимальная высота ручки */
+            border-radius: 10px; /* Скругление углов ручки */
+        }</string>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QScrollBar" name="verticalScrollBar">
+          <property name="styleSheet">
+           <string notr="true"> QScrollBar::handle:vertical {
+            background: #808080; /* Цвет ручки */
+            min-height: 25px;    /* Минимальная высота ручки */
+            border-radius: 10px; /* Скругление углов ручки */
+        }</string>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
          <widget class="QLabel" name="imageLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="minimumSize">
            <size>
             <width>200</width>
@@ -170,7 +249,7 @@ border-radius: 8px;
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>838</width>
+     <width>808</width>
      <height>28</height>
     </rect>
    </property>
