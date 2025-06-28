@@ -62,7 +62,8 @@
 
 # ⚙️ Демонстрация работы [под Windows]
 
-https://github.com/user-attachments/assets/a7a50e5c-e945-446d-bdb5-8a8445d7bb2b
+https://github.com/user-attachments/assets/95e38ce0-27c3-4229-9688-195f4b2b3277
+
 
 
 
