@@ -53,7 +53,7 @@
 #### 5. Запустите приложение.
 ---
 
-# ⚙️ Демонстрация работы под Linux
+# ⚙️ Демонстрация работы [под Linux]
 
 [Screencast from 2025-06-28 06-26-27.webm](https://github.com/user-attachments/assets/9c777198-6f1a-4642-b5f6-2c5e72043ef6)
 
