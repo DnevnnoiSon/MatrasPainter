@@ -11,3 +11,6 @@ build/
 /build-*
 /release/
 /debug/
+
+.qtc_clangd
+.qmake.stash
