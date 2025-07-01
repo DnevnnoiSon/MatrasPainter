@@ -60,10 +60,6 @@
 [Screencast from 2025-06-28 06-26-27.webm](https://github.com/user-attachments/assets/9c777198-6f1a-4642-b5f6-2c5e72043ef6)
 
 
-# ⚙️ Демонстрация работы [под Windows]
-
-https://github.com/user-attachments/assets/95e38ce0-27c3-4229-9688-195f4b2b3277
-
 
 
 
